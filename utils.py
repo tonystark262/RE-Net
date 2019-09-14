@@ -242,6 +242,7 @@ def get_sorted_s_r_embed(s_hist, s, r, ent_embeds):
 
 
 def get_sorted_s_r_embed_rgcn(s_hist_data, s, r, ent_embeds, graph_dict):
+    print('--------------------------sorted fun')
     s_hist = s_hist_data[0]
     s_hist_t = s_hist_data[1]
     s_hist_len = torch.LongTensor(list(map(len, s_hist))).cuda()
@@ -256,12 +257,18 @@ def get_sorted_s_r_embed_rgcn(s_hist_data, s, r, ent_embeds, graph_dict):
         s_hist_sorted.append(s_hist[idx])
         s_hist_t_sorted.append(s_hist_t[idx])
 
+    print(s_hist_sorted)
+    print(s_hist_t_sorted)
+
     s_tem = s[s_idx]
     r_tem = r[s_idx]
 
     neighs_t = get_neighs_by_t(s_hist_sorted, s_hist_t_sorted, s_tem)
+    print(neighs_t)
 
     g_list, g_id_dict = get_g_list_id(neighs_t, graph_dict)
+    print(g_list)
+    print(g_id_dict)
 
     node_ids_graph, len_s = get_node_ids_to_g_id(
         s_hist_sorted, s_hist_t_sorted, s_tem, g_list, g_id_dict)

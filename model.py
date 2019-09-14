@@ -84,11 +84,11 @@ class RENet(nn.Module):
         r = triplets[:, 1]
         o = triplets[:, 2]
 
-        # print('---------- forward ------------')
-        # print(triplets)
-        # print(s_hist)
-        # print(o_hist)
-        # print(graph_dict)
+        print('---------- forward ------------')
+        print(triplets)
+        print(s_hist)
+        print(o_hist)
+        print(graph_dict)
 
         batch_size = len(s)
 
