@@ -281,6 +281,8 @@ def get_sorted_s_r_embed_rgcn(s_hist_data, s, r, ent_embeds, graph_dict):
     batched_graph.ndata['h'] = ent_embeds[batched_graph.ndata['id']].view(
         -1, ent_embeds.shape[1])
     print(batched_graph)
+    print(batched_graph.ndata['id'])
+    print(batched_graph.ndata['h'])
 
     move_dgl_to_cuda(batched_graph)
 
