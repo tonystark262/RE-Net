@@ -19,7 +19,7 @@ class MeanAggregator(nn.Module):
     def forward(self, s_hist, s, r, ent_embeds, rel_embeds):
         s_len_non_zero, s_tem, r_tem, embeds_stack, len_s, embeds_split = get_sorted_s_r_embed(
             s_hist, s, r, ent_embeds)
-
+        print(embeds_stack.shape)
         # To get mean vector at each time
         curr = 0
         rows = []
@@ -52,7 +52,7 @@ class MeanAggregator(nn.Module):
                 (embeds, ent_embeds[s_tem[i]].repeat(len(embeds), 1),
                  rel_embeds[r_tem[i]].repeat(len(embeds), 1)),
                 dim=1)
-
+        exit()
         s_embed_seq_tensor = self.dropout(s_embed_seq_tensor)
 
         s_packed_input = torch.nn.utils.rnn.pack_padded_sequence(
