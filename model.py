@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from Aggregator import MeanAggregator, AttnAggregator, RGCNAggregator
 from utils import *
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 
 
 class RENet(nn.Module):
@@ -129,19 +130,115 @@ class RENet(nn.Module):
                                                graph_dict,
                                                reverse=True)
         else:
-
+            ## --------------------------------- object
             s_hist_len = torch.LongTensor(list(map(len, s_hist))).cuda()
-            print(s_hist_len)
             s_len, s_idx = s_hist_len.sort(0, descending=True)
             o_hist_len = torch.LongTensor(list(map(len, o_hist))).cuda()
             o_len, o_idx = o_hist_len.sort(0, descending=True)
-            s_packed_input = self.aggregator_s(s_hist, s, r, self.ent_embeds,
-                                               self.rel_embeds[:self.num_rels])
-            o_packed_input = self.aggregator_o(o_hist, o, r, self.ent_embeds,
-                                               self.rel_embeds[self.num_rels:])
 
-        tt, s_h = self.sub_encoder(s_packed_input)
-        tt, o_h = self.ob_encoder(o_packed_input)
+            num_non_zero_s = len(torch.nonzero(s_len))
+            s_len_non_zero = s_len[:num_non_zero_s]
+            num_non_zero_o = len(torch.nonzero(o_len))
+            o_len_non_zero = o_len[:num_non_zero_o]
+
+            print(s_len_non_zero)
+
+            o_hist_temp = []
+            for i in range(len(o_hist)):
+                a = o_hist[i]
+                o_hist_temp += [torch.LongTensor(k).cuda() for k in a]
+                for _ in range(len(a), self.seq_len):
+                    o_hist_temp.append(torch.LongTensor([]).cuda())
+
+            o_entity_hist_pad = pad_sequence(o_hist_temp,
+                                             batch_first=True,
+                                             padding_value=self.num_nodes)
+
+            true_values_o = torch.lt(
+                o_entity_hist_pad, self.num_nodes - 0.5).type(
+                    torch.cuda.FloatTensor)  # [batch_size*seq_len, max_r]
+
+            true_values_o = true_values_o.unsqueeze(dim=-1).repeat_interleave(
+                self.h_dim, dim=-1)
+
+            num_true_values_o = torch.sum(true_values_o, dim=1) + 1e-19
+            num_true_values_o = num_true_values_o.reshape(
+                batch_size * self.seq_len, self.h_dim)
+
+            o_entity_hist_embedding = self.ent_embeds[
+                o_entity_hist_pad] * true_values_o
+            o_entity_hist_embedding_sum = torch.sum(
+                o_entity_hist_embedding,
+                dim=1).reshape(batch_size * self.seq_len, self.h_dim)
+            o_entity_hist_embedding_mean = o_entity_hist_embedding_sum / num_true_values_o
+            o_entity_hist_embedding_mean = o_entity_hist_embedding_mean.reshape(
+                batch_size, self.seq_len, self.h_dim)
+
+            o_concat_embedding = torch.cat(
+                [o_embedding, o_entity_hist_embedding_mean, r_embedding_o],
+                dim=2)
+
+            packed_embedding_o = pack_padded_sequence(
+                o_concat_embedding[o_idx[:num_non_zero_o]],
+                o_hist_len[o_idx[:num_non_zero_o]],
+                batch_first=True,
+                enforce_sorted=False)
+
+            ## ---------------------------------subject
+
+            s_hist_temp = []
+            for i in range(len(s_hist)):
+                a = s_hist[i]
+                s_hist_temp += [torch.LongTensor(k).cuda() for k in a]
+                for _ in range(len(a), self.seq_len):
+                    s_hist_temp.append(torch.LongTensor([]).cuda())
+
+            s_entity_hist_pad = pad_sequence(s_hist_temp,
+                                             batch_first=True,
+                                             padding_value=self.num_nodes)
+
+            true_values_s = torch.lt(
+                s_entity_hist_pad, self.num_nodes - 0.5).type(
+                    torch.cuda.FloatTensor)  # [batch_size*seq_len, max_r]
+
+            true_values_s = true_values_s.unsqueeze(dim=-1).repeat_interleave(
+                self.h_dim, dim=-1)
+
+            num_true_values_s = torch.sum(true_values_s, dim=1) + 1e-19
+            num_true_values_s = num_true_values_s.reshape(
+                batch_size * self.seq_len, self.h_dim)
+
+            s_entity_hist_embedding = self.ent_embeds[
+                s_entity_hist_pad] * true_values_s
+            s_entity_hist_embedding_sum = torch.sum(
+                s_entity_hist_embedding,
+                dim=1).reshape(batch_size * self.seq_len, self.h_dim)
+            s_entity_hist_embedding_mean = s_entity_hist_embedding_sum / num_true_values_s
+            s_entity_hist_embedding_mean = s_entity_hist_embedding_mean.reshape(
+                batch_size, self.seq_len, self.h_dim)
+
+            s_concat_embedding = torch.cat(
+                [s_embedding, s_entity_hist_embedding_mean, r_embedding_s],
+                dim=2)
+
+            packed_embedding_s = pack_padded_sequence(
+                s_concat_embedding[s_idx[:num_non_zero_s]],
+                s_hist_len[s_idx[:num_non_zero_s]],
+                batch_first=True,
+                enforce_sorted=False)
+
+            # s_hist_len = torch.LongTensor(list(map(len, s_hist))).cuda()
+            # print(s_hist_len)
+            # s_len, s_idx = s_hist_len.sort(0, descending=True)
+            # o_hist_len = torch.LongTensor(list(map(len, o_hist))).cuda()
+            # o_len, o_idx = o_hist_len.sort(0, descending=True)
+            # s_packed_input = self.aggregator_s(s_hist, s, r, self.ent_embeds,
+            #                                    self.rel_embeds[:self.num_rels])
+            # o_packed_input = self.aggregator_o(o_hist, o, r, self.ent_embeds,
+            #                                    self.rel_embeds[self.num_rels:])
+
+        tt, s_h = self.sub_encoder(packed_embedding_s)
+        tt, o_h = self.ob_encoder(packed_embedding_o)
 
         s_h = s_h.squeeze()
         o_h = o_h.squeeze()
