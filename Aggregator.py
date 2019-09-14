@@ -48,11 +48,11 @@ class MeanAggregator(nn.Module):
         for i, embeds in enumerate(embeds_split):
             print(embeds.shape)
             print(ent_embeds[s_tem[i]].repeat(len(embeds), 1).shape)
+            exit()
             s_embed_seq_tensor[i, torch.arange(len(embeds)), :] = torch.cat(
                 (embeds, ent_embeds[s_tem[i]].repeat(len(embeds), 1),
                  rel_embeds[r_tem[i]].repeat(len(embeds), 1)),
                 dim=1)
-        exit()
         s_embed_seq_tensor = self.dropout(s_embed_seq_tensor)
 
         s_packed_input = torch.nn.utils.rnn.pack_padded_sequence(
