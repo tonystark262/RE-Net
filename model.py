@@ -142,7 +142,7 @@ class RENet(nn.Module):
             num_non_zero_o = len(torch.nonzero(o_len))
             o_len_non_zero = o_len[:num_non_zero_o]
 
-            print(s_len_non_zero)
+            # print(s_len_non_zero)
 
             o_hist_temp = []
             for i in range(len(o_hist)):
