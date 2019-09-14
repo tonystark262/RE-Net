@@ -26,7 +26,7 @@ class RENet(nn.Module):
         nn.init.xavier_uniform_(self.rel_embeds,
                                 gain=nn.init.calculate_gain('relu'))
 
-        self.ent_embeds = nn.Parameter(torch.Tensor(in_dim, h_dim))
+        self.ent_embeds = nn.Parameter(torch.Tensor(in_dim + 1, h_dim))
         nn.init.xavier_uniform_(self.ent_embeds,
                                 gain=nn.init.calculate_gain('relu'))
 
@@ -85,6 +85,29 @@ class RENet(nn.Module):
         s = triplets[:, 0]
         r = triplets[:, 1]
         o = triplets[:, 2]
+
+        batch_size = len(s)
+
+        s_embedding = self.ent_embeds[torch.tensor(s).cuda().reshape(
+            batch_size, 1).repeat_interleave(self.seq_len, dim=1).reshape(
+                batch_size, self.seq_len)].reshape(batch_size, self.seq_len,
+                                                   self.h_dim)
+        o_embedding = self.ent_embeds[torch.tensor(o).cuda().reshape(
+            batch_size, 1).repeat_interleave(self.seq_len, dim=1).reshape(
+                batch_size, self.seq_len)].reshape(batch_size, self.seq_len,
+                                                   self.h_dim)
+        r_embedding_s = self.rel_embeds[:self.num_rels][torch.tensor(
+            r).cuda().reshape(batch_size, 1).repeat_interleave(
+                self.seq_len,
+                dim=1).reshape(batch_size,
+                               self.seq_len)].reshape(batch_size, self.seq_len,
+                                                      self.h_dim)
+        r_embedding_o = self.rel_embeds[self.num_rels:][torch.tensor(
+            r).cuda().reshape(batch_size, 1).repeat_interleave(
+                self.seq_len,
+                dim=1).reshape(batch_size,
+                               self.seq_len)].reshape(batch_size, self.seq_len,
+                                                      self.h_dim)
 
         if self.model == 3:
             s_hist_len = torch.LongTensor(list(map(len, s_hist[0]))).cuda()
