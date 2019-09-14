@@ -25,12 +25,12 @@ class RENet(nn.Module):
         self.seq_len = seq_len
         self.num_k = num_k
         self.rel_embeds = nn.Parameter(torch.Tensor(2 * num_rels, h_dim))
-        nn.init.xavier_uniform_(self.rel_embeds,
-                                gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(
+            self.rel_embeds, gain=nn.init.calculate_gain('relu'))
 
         self.ent_embeds = nn.Parameter(torch.Tensor(in_dim + 1, h_dim))
-        nn.init.xavier_uniform_(self.ent_embeds,
-                                gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(
+            self.ent_embeds, gain=nn.init.calculate_gain('relu'))
 
         self.dropout = nn.Dropout(dropout)
         self.sub_encoder = nn.GRU(3 * h_dim, h_dim, batch_first=True)
@@ -39,15 +39,11 @@ class RENet(nn.Module):
         if model == 0:  # Attentive Aggregator
             self.aggregator_s = AttnAggregator(h_dim, dropout, seq_len)
         elif model == 1:  # Mean Aggregator
-            self.aggregator_s = MeanAggregator(h_dim,
-                                               dropout,
-                                               seq_len,
-                                               gcn=False)
+            self.aggregator_s = MeanAggregator(
+                h_dim, dropout, seq_len, gcn=False)
         elif model == 2:  # Pooling Aggregator
-            self.aggregator_s = MeanAggregator(h_dim,
-                                               dropout,
-                                               seq_len,
-                                               gcn=True)
+            self.aggregator_s = MeanAggregator(
+                h_dim, dropout, seq_len, gcn=True)
         elif model == 3:  # RGCN Aggregator
             self.aggregator_s = RGCNAggregator(h_dim, dropout, in_dim,
                                                num_rels, 100, model, seq_len)
@@ -88,6 +84,12 @@ class RENet(nn.Module):
         r = triplets[:, 1]
         o = triplets[:, 2]
 
+        # print('---------- forward ------------')
+        # print(triplets)
+        # print(s_hist)
+        # print(o_hist)
+        # print(graph_dict)
+
         batch_size = len(s)
 
         # s_embedding = self.ent_embeds[torch.tensor(s).cuda().reshape(
@@ -116,20 +118,22 @@ class RENet(nn.Module):
             s_len, s_idx = s_hist_len.sort(0, descending=True)
             o_hist_len = torch.LongTensor(list(map(len, o_hist[0]))).cuda()
             o_len, o_idx = o_hist_len.sort(0, descending=True)
-            s_packed_input = self.aggregator_s(s_hist,
-                                               s,
-                                               r,
-                                               self.ent_embeds,
-                                               self.rel_embeds[:self.num_rels],
-                                               graph_dict,
-                                               reverse=False)
-            o_packed_input = self.aggregator_o(o_hist,
-                                               o,
-                                               r,
-                                               self.ent_embeds,
-                                               self.rel_embeds[self.num_rels:],
-                                               graph_dict,
-                                               reverse=True)
+            s_packed_input = self.aggregator_s(
+                s_hist,
+                s,
+                r,
+                self.ent_embeds,
+                self.rel_embeds[:self.num_rels],
+                graph_dict,
+                reverse=False)
+            o_packed_input = self.aggregator_o(
+                o_hist,
+                o,
+                r,
+                self.ent_embeds,
+                self.rel_embeds[self.num_rels:],
+                graph_dict,
+                reverse=True)
         else:
             # ## --------------------------------- object
             # s_hist_len = torch.LongTensor(list(map(len, s_hist))).cuda()
@@ -250,14 +254,16 @@ class RENet(nn.Module):
 
         ob_pred = self.linear_sub(
             self.dropout(
-                torch.cat((self.ent_embeds[s[s_idx]], s_h,
-                           self.rel_embeds[:self.num_rels][r[s_idx]]),
-                          dim=1)))
+                torch.cat(
+                    (self.ent_embeds[s[s_idx]], s_h,
+                     self.rel_embeds[:self.num_rels][r[s_idx]]),
+                    dim=1)))
         sub_pred = self.linear_ob(
             self.dropout(
-                torch.cat((self.ent_embeds[o[o_idx]], o_h,
-                           self.rel_embeds[self.num_rels:][r[o_idx]]),
-                          dim=1)))
+                torch.cat(
+                    (self.ent_embeds[o[o_idx]], o_h,
+                     self.rel_embeds[self.num_rels:][r[o_idx]]),
+                    dim=1)))
 
         loss_sub = self.criterion(ob_pred, o[s_idx])
         loss_ob = self.criterion(sub_pred, s[o_idx])

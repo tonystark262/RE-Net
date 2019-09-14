@@ -43,36 +43,6 @@ def get_total_number(inPath, fileName):
             return int(line_split[0]), int(line_split[1])
 
 
-def load_quadruples(inPath, fileName, fileName2=None):
-    with open(os.path.join(inPath, fileName), 'r') as fr:
-        quadrupleList = []
-        times = set()
-        for line in fr:
-            line_split = line.split()
-            head = int(line_split[0])
-            tail = int(line_split[2])
-            rel = int(line_split[1])
-            time = int(line_split[3])
-            quadrupleList.append([head, rel, tail, time])
-            times.add(time)
-        # times = list(times)
-        # times.sort()
-    if fileName2 is not None:
-        with open(os.path.join(inPath, fileName2), 'r') as fr:
-            for line in fr:
-                line_split = line.split()
-                head = int(line_split[0])
-                tail = int(line_split[2])
-                rel = int(line_split[1])
-                time = int(line_split[3])
-                quadrupleList.append([head, rel, tail, time])
-                times.add(time)
-    times = list(times)
-    times.sort()
-
-    return np.array(quadrupleList), np.asarray(times)
-
-
 def get_data_with_t(data, tim):
     triples = [[quad[0], quad[1], quad[2]] for quad in data if quad[3] == tim]
     return np.array(triples)
@@ -96,7 +66,10 @@ def get_big_graph(data, num_rels):
     rel_s = np.concatenate((rel, rel + num_rels))
     g.add_edges(src, dst)
     norm = comp_deg_norm(g)
-    g.ndata.update({'id': torch.from_numpy(uniq_v).long().view(-1, 1), 'norm': norm.view(-1, 1)})
+    g.ndata.update({
+        'id': torch.from_numpy(uniq_v).long().view(-1, 1),
+        'norm': norm.view(-1, 1)
+    })
     g.edata['type_s'] = torch.LongTensor(rel_s)
     g.edata['type_o'] = torch.LongTensor(rel_o)
     g.ids = {}
@@ -134,7 +107,7 @@ s_his_cache_t = [None for _ in range(num_e)]
 o_his_cache_t = [None for _ in range(num_e)]
 
 for tim in train_times:
-    print(str(tim)+'\t'+str(max(train_times)))
+    print(str(tim) + '\t' + str(max(train_times)))
     data = get_data_with_t(train_data, tim)
     graph_dict_train[tim] = get_big_graph(data, num_r)
 
@@ -315,4 +288,3 @@ with open('test_history_sub.txt', 'wb') as fp:
 with open('test_history_ob.txt', 'wb') as fp:
     pickle.dump([o_history_data_test, o_history_data_test_t], fp)
     # print(train)
-
