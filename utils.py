@@ -262,6 +262,8 @@ def get_sorted_s_r_embed_rgcn(s_hist_data, s, r, ent_embeds, graph_dict):
 
     s_tem = s[s_idx]
     r_tem = r[s_idx]
+    print(s_tem)
+    print(r_tem)
 
     neighs_t = get_neighs_by_t(s_hist_sorted, s_hist_t_sorted, s_tem)
     print(neighs_t)
@@ -272,10 +274,13 @@ def get_sorted_s_r_embed_rgcn(s_hist_data, s, r, ent_embeds, graph_dict):
 
     node_ids_graph, len_s = get_node_ids_to_g_id(
         s_hist_sorted, s_hist_t_sorted, s_tem, g_list, g_id_dict)
-
+    print(node_ids_graph)
+    print(len_s)
     batched_graph = dgl.batch(g_list)
+    print(batched_graph)
     batched_graph.ndata['h'] = ent_embeds[batched_graph.ndata['id']].view(
         -1, ent_embeds.shape[1])
+    print(batched_graph)
 
     move_dgl_to_cuda(batched_graph)
 
