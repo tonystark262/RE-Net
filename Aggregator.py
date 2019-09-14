@@ -47,7 +47,7 @@ class MeanAggregator(nn.Module):
         # Slow!!!
         for i, embeds in enumerate(embeds_split):
             print(embeds.shape)
-            print(nt_embeds[s_tem[i]].repeat(len(embeds), 1).shape)
+            print(ent_embeds[s_tem[i]].repeat(len(embeds), 1).shape)
             s_embed_seq_tensor[i, torch.arange(len(embeds)), :] = torch.cat(
                 (embeds, ent_embeds[s_tem[i]].repeat(len(embeds), 1),
                  rel_embeds[r_tem[i]].repeat(len(embeds), 1)),
