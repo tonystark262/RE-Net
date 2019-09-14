@@ -18,7 +18,7 @@ class RENet(nn.Module):
                  num_k=10):
         super(RENet, self).__init__()
         self.in_dim = in_dim
-        self.nodes = in_dim
+        self.num_nodes = in_dim
         self.h_dim = h_dim
         self.num_rels = num_rels
         self.model = model
