@@ -41,11 +41,13 @@ class MeanAggregator(nn.Module):
             embeds_mean = self.gcn_layer(embeds_mean)
             embeds_mean = F.relu(embeds_mean)
         embeds_split = torch.split(embeds_mean, s_len_non_zero.tolist())
-        s_embed_seq_tensor = torch.zeros(len(s_len_non_zero), self.seq_len,
-                                         3 * self.h_dim).cuda()
+        s_embed_seq_tensor = torch.zeros(
+            len(s_len_non_zero), self.seq_len, 3 * self.h_dim).cuda()
 
         # Slow!!!
         for i, embeds in enumerate(embeds_split):
+            print(embeds.shape)
+            print(nt_embeds[s_tem[i]].repeat(len(embeds), 1).shape)
             s_embed_seq_tensor[i, torch.arange(len(embeds)), :] = torch.cat(
                 (embeds, ent_embeds[s_tem[i]].repeat(len(embeds), 1),
                  rel_embeds[r_tem[i]].repeat(len(embeds), 1)),
@@ -82,8 +84,8 @@ class AttnAggregator(nn.Module):
         s_len_non_zero, s_tem, r_tem, embeds_stack, len_s, embeds_split = get_sorted_s_r_embed(
             s_hist, s, r, ent_embeds)
 
-        s_embed_seq_tensor = torch.zeros(len(s_len_non_zero), self.seq_len,
-                                         3 * self.h_dim).cuda()
+        s_embed_seq_tensor = torch.zeros(
+            len(s_len_non_zero), self.seq_len, 3 * self.h_dim).cuda()
 
         curr = 0
         for i, s_l in enumerate(s_len_non_zero):
@@ -103,8 +105,9 @@ class AttnAggregator(nn.Module):
             weights_cat = list(
                 map(lambda x: F.softmax(x, dim=0), weights_split))
             embeds = torch.stack(
-                list(map(lambda x, y: torch.sum(x * y, dim=0), weights_cat,
-                         em)))
+                list(
+                    map(lambda x, y: torch.sum(x * y, dim=0), weights_cat,
+                        em)))
             s_embed_seq_tensor[i, torch.arange(len(embeds)), :] = torch.cat(
                 (embeds, ent_embeds[s_tem[i]].repeat(len(embeds), 1),
                  rel_embeds[r_tem[i]].repeat(len(embeds), 1)),
@@ -127,9 +130,10 @@ class AttnAggregator(nn.Module):
             emb_s_r = torch.cat((emb_s, ss, rr), dim=1)
             weights = F.softmax(F.tanh(self.attn_s(emb_s_r)) @ self.v_s, dim=0)
 
-            inp[i] = torch.cat((torch.sum(
-                weights * emb_s, dim=0), ent_embeds[s], rel_embeds[r]),
-                               dim=0)
+            inp[i] = torch.cat(
+                (torch.sum(weights * emb_s, dim=0), ent_embeds[s],
+                 rel_embeds[r]),
+                dim=0)
         return inp
 
 
@@ -150,20 +154,22 @@ class RGCNAggregator(nn.Module):
         self.num_nodes = num_nodes
         self.model = model
 
-        self.rgcn1 = RGCNLayer(self.h_dim,
-                               self.h_dim,
-                               2 * self.num_rels,
-                               num_bases,
-                               activation=F.relu,
-                               self_loop=True,
-                               dropout=dropout)
-        self.rgcn2 = RGCNLayer(self.h_dim,
-                               self.h_dim,
-                               2 * self.num_rels,
-                               num_bases,
-                               activation=None,
-                               self_loop=True,
-                               dropout=dropout)
+        self.rgcn1 = RGCNLayer(
+            self.h_dim,
+            self.h_dim,
+            2 * self.num_rels,
+            num_bases,
+            activation=F.relu,
+            self_loop=True,
+            dropout=dropout)
+        self.rgcn2 = RGCNLayer(
+            self.h_dim,
+            self.h_dim,
+            2 * self.num_rels,
+            num_bases,
+            activation=None,
+            self_loop=True,
+            dropout=dropout)
 
     def forward(self, s_hist, s, r, ent_embeds, rel_embeds, graph_dict,
                 reverse):
@@ -180,18 +186,16 @@ class RGCNAggregator(nn.Module):
             embeds_mean = embeds_mean[torch.LongTensor(node_ids_graph)]
 
             embeds_split = torch.split(embeds_mean, s_len_non_zero.tolist())
-            s_embed_seq_tensor = torch.zeros(len(s_len_non_zero), self.seq_len,
-                                             3 * self.h_dim).cuda()
+            s_embed_seq_tensor = torch.zeros(
+                len(s_len_non_zero), self.seq_len, 3 * self.h_dim).cuda()
 
             # Slow!!!
             for i, embeds in enumerate(embeds_split):
-                s_embed_seq_tensor[i, torch.
-                                   arange(len(embeds)), :] = torch.cat(
-                                       (embeds, ent_embeds[s_tem[i]].repeat(
-                                           len(embeds),
-                                           1), rel_embeds[r_tem[i]].repeat(
-                                               len(embeds), 1)),
-                                       dim=1)
+                s_embed_seq_tensor[i, torch.arange(len(
+                    embeds)), :] = torch.cat(
+                        (embeds, ent_embeds[s_tem[i]].repeat(len(embeds), 1),
+                         rel_embeds[r_tem[i]].repeat(len(embeds), 1)),
+                        dim=1)
 
             s_embed_seq_tensor = self.dropout(s_embed_seq_tensor)
 
@@ -216,8 +220,8 @@ class RGCNAggregator(nn.Module):
 
         inp = torch.zeros(len(s_hist), 3 * self.h_dim).cuda()
         inp[torch.arange(len(embeds)), :] = torch.cat(
-            (embeds, ent_embeds[s].repeat(
-                len(embeds), 1), rel_embeds[r].repeat(len(embeds), 1)),
+            (embeds, ent_embeds[s].repeat(len(embeds), 1),
+             rel_embeds[r].repeat(len(embeds), 1)),
             dim=1)
 
         return inp
